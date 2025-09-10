@@ -63,6 +63,7 @@ def main():
             supabase.table("review").insert({
                 "reviewed_username": REVIEWED_USERNAME,
                 "reviewer_username": reviewer_username,
+                "score": 5,
                 "review": random_review,
             }).execute()
 
