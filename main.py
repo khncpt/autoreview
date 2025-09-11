@@ -11,7 +11,8 @@ load_dotenv()
 # --- Config ---
 SUPABASE_URL = os.environ["SUPABASE_URL"]
 SUPABASE_KEY = os.environ["SUPABASE_KEY"]
-CSV_URL = os.environ["CSV_URL"]  
+USERNAME_CSV_URL = os.environ["USERNAME_CSV_URL"]  
+REVIEW_JSON_URL = os.environ["REVIEW_JSON_URL"]  
 REVIEWED_USERNAME = "air"
 REVIEWED_EMAIL = "Ceokhan@gmail.com"  
 
@@ -21,15 +22,36 @@ supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 def load_reviews() -> list[str]:
     """Download CSV from HTTPS URL and extract reviews."""
-    resp = requests.get(CSV_URL, timeout=30)
+    resp = requests.get(USERNAME_CSV_URL, timeout=30)
     resp.raise_for_status()
     df = pd.read_csv(io.StringIO(resp.text), header=None)
     return df[0].dropna().astype(str).tolist()
 
 
+def get_random_items(arr, count):
+    return random.sample(arr, min(count, len(arr)))
+
+def load_tag_data():
+    res = requests.get(REVIEW_JSON_URL)
+    res.raise_for_status()
+    subTag = res.json()
+
+    categories = list(subTag.keys())
+    chosen_categories = get_random_items(categories, 3)
+
+    tag_data = {}
+    for cat in chosen_categories:
+        options = subTag[cat]
+        count = random.randint(2, 3)  
+        chosen = get_random_items(options, count)
+        tag_data[cat] = [c["key"] for c in chosen]
+
+    return tag_data
+
 def main():
     try:
         reviews = load_reviews()
+        tag_data = load_tag_data()
 
         # Fetch usernames from user and instagramProfile
         users = supabase.table("user").select("username").execute()
@@ -65,6 +87,7 @@ def main():
                 "reviewer_username": reviewer_username,
                 "score": 5,
                 "review": random_review,
+                "tag_data": tag_data
             }).execute()
 
             inserted += 1
@@ -82,3 +105,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
